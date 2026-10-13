@@ -1,0 +1,12 @@
+# Deploy statico su Netlify.
+# Il dominio canonico è in astro.config.mjs (SITE_URL).
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Node 22 LTS (il 20 è fuori supporto da aprile 2026); Astro 5.18 lo supporta
+  NODE_VERSION = "22"
+  # il lockfile generato su Windows fa saltare il binding nativo per Linux (npm#4828):
+  # su Netlify si installa fresco
+  NPM_FLAGS = "--no-package-lock"

@@ -1,0 +1,26 @@
+{
+  "name": "bruni-geometra",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev --port 4805",
+    "build": "astro build",
+    "preview": "astro preview --port 4806",
+    "astro": "astro",
+    "slots": "node scripts/slots.mjs",
+    "brand": "node scripts/genera-brand.mjs"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.6.0",
+    "@fontsource-variable/fraunces": "^5.2.5",
+    "@fontsource-variable/inter": "^5.2.5",
+    "astro": "^5.14.1"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.4"
+  },
+  "overrides": {
+    "rollup": "4.63.0"
+  }
+}

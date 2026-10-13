@@ -1,0 +1,217 @@
+---
+/**
+ * IntroOverlay — l'apertura del sito.
+ *
+ * Il logo è il nome dello studio. Sequenza: compare il punto colorato, sotto il nome si disegna
+ * una linea di quota che parte dal centro e va verso i due lati, si chiude con le tacche
+ * alle estremità, e il nome si apre ai due lati del punto. Tempi e keyframe della base.
+ *
+ * Regole che si è dato questo componente:
+ * - la coreografia è tutta in CSS, così parte al primo frame e non dipende dal JS;
+ * - alla fine dell'animazione il velo si toglie da solo (animation-fill-mode: forwards),
+ *   quindi anche se il JS non gira il sito resta utilizzabile;
+ * - il JS serve solo a ricordare che l'intro è già stata vista in questa sessione,
+ *   a sbloccare lo scroll e a permettere di saltarla con un clic o un tasto;
+ * - con prefers-reduced-motion l'intro non compare affatto.
+ *
+ * Le due parole sono quelle del logotipo (lib/studio.ts → marchio).
+ */
+import { STUDIO } from '../lib/studio';
+---
+
+<div class="opening" data-opening aria-hidden="true">
+  <div class="opening__stage">
+    <svg class="opening__line" viewBox="0 0 900 200" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <!-- linea di quota sotto il nome: due tratti dal centro verso i lati, poi le tacche -->
+      <path class="opening__stroke opening__stroke--up" d="M450 156 L30 156" />
+      <path class="opening__stroke opening__stroke--down" d="M450 156 L870 156" />
+      <path class="opening__tick" d="M30 140 V172 M870 140 V172" />
+    </svg>
+
+    <p class="opening__word">
+      <span class="opening__w opening__w--a">{STUDIO.marchio.a}</span>
+      <span class="opening__dot" aria-hidden="true"></span>
+      <span class="opening__w opening__w--b">{STUDIO.marchio.b}</span>
+    </p>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const intro = document.querySelector('[data-opening]');
+    if (!intro) return;
+
+    // se il velo non si vede — già visto in questa sessione, o animazioni ridotte —
+    // lo script non deve fare niente: niente blocco dello scroll, niente timer
+    const nascosto =
+      document.documentElement.classList.contains('opening-skip') ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (nascosto) {
+      intro.remove();
+      return;
+    }
+
+    const chiudi = () => {
+      intro.classList.add('is-off');
+      document.documentElement.classList.remove('opening-lock');
+      try { sessionStorage.setItem('intro-vista', '1'); } catch {}
+      // rete di sicurezza: se le animazioni sono congelate (scheda in secondo piano,
+      // batteria bassa, throttling del browser) l'animationend non arriva mai.
+      // Il velo se ne va comunque.
+      setTimeout(() => intro.remove(), 450);
+    };
+
+    // blocca lo scroll mentre il velo è su, ma con una rete di sicurezza:
+    // qualunque cosa succeda, dopo 2,4s lo scroll torna libero
+    document.documentElement.classList.add('opening-lock');
+    setTimeout(chiudi, 2400);
+
+    // si può saltare
+    ['pointerdown', 'keydown', 'wheel'].forEach((ev) =>
+      window.addEventListener(ev, chiudi, { once: true, passive: true })
+    );
+
+    // quando il velo ha finito di sparire, esce anche dal DOM
+    intro.addEventListener('animationend', (e) => {
+      if (e.animationName.startsWith('opening-exit')) intro.remove();
+    });
+  })();
+</script>
+
+<style>
+  .opening {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    display: grid;
+    place-items: center;
+    background: var(--surface);
+    animation: opening-exit 0.55s var(--ease) 1.45s forwards;
+  }
+
+  .opening.is-off {
+    /* non aspetta l'animazione per smettere di intercettare i clic */
+    pointer-events: none;
+    animation: opening-exit 0.35s var(--ease) forwards;
+  }
+
+  .opening__stage {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: min(92vw, 720px);
+    height: 100%;
+  }
+
+  /* la linea: alta quanto lo schermo, centrata sul punto */
+  .opening__line {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .opening__stroke {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-dasharray: 520;
+    stroke-dashoffset: 520;
+    animation: opening-draw 1s var(--ease) 0.2s forwards;
+  }
+
+  .opening__stroke--down {
+    animation-delay: 0.2s;
+  }
+
+  .opening__tick {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    opacity: 0;
+    animation: opening-word 0.4s var(--ease) 1s forwards;
+  }
+
+  /* il logotipo, con il punto in mezzo come nel marchio */
+  .opening__word {
+    position: relative;
+    margin: 0;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    font-family: var(--font-body);
+    font-size: clamp(1.05rem, 3.4vw, 1.9rem);
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .opening__w {
+    opacity: 0;
+    animation: opening-word 0.75s var(--ease) 0.62s forwards;
+  }
+
+  .opening__w--a {
+    justify-self: end;
+    transform: translateX(14px);
+  }
+
+  .opening__w--b {
+    justify-self: start;
+    font-weight: 300;
+    transform: translateX(-14px);
+  }
+
+  .opening__dot {
+    width: 0.62em;
+    height: 0.62em;
+    margin-inline: 0.7em;
+    border-radius: 50%;
+    background: var(--accent);
+    flex: none;
+    transform: scale(0);
+    animation: opening-dot 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  @keyframes opening-dot {
+    to {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes opening-draw {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes opening-word {
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes opening-exit {
+    to {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+  }
+
+  /* già vista in questa sessione, oppure animazioni ridotte: niente intro */
+  :global(html.opening-skip) .opening {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .opening {
+      display: none;
+    }
+  }
+</style>
